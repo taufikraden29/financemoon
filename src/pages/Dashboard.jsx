@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
-import { Plus, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { Clock, Plus, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import AccountsOverview from '../components/AccountsOverview';
 import AddTransactionModal from '../components/AddTransactionModal';
@@ -15,6 +15,15 @@ import { useFinance } from '../context/FinanceContext';
 const Dashboard = () => {
     const { transactions, getBalance, getIncome, getExpense } = useFinance();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Update clock every second
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Get greeting based on time
     const getGreeting = () => {
@@ -22,6 +31,25 @@ const Dashboard = () => {
         if (hour < 12) return 'Good Morning';
         if (hour < 18) return 'Good Afternoon';
         return 'Good Evening';
+    };
+
+    // Format time for WIB
+    const formatTimeWIB = () => {
+        return currentTime.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+    };
+
+    const formatDateWIB = () => {
+        return currentTime.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
     };
 
     // Sort transactions by date descending
@@ -41,15 +69,31 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-6 md:space-y-8">
-            {/* Header */}
-            <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-                <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white">
-                        {getGreeting()} 👋
-                    </h2>
-                    <p className="text-slate-400 mt-1 text-sm md:text-base">
-                        Here's your financial overview
-                    </p>
+            {/* Header with Clock */}
+            <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-white">
+                                {getGreeting()} 👋
+                            </h2>
+                            <p className="text-slate-400 mt-1 text-sm md:text-base">
+                                Here's your financial overview
+                            </p>
+                        </div>
+                        {/* Digital Clock */}
+                        <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl">
+                            <Clock className="w-5 h-5 text-emerald-400" />
+                            <div>
+                                <div className="text-xl md:text-2xl font-mono font-bold text-white tracking-wider">
+                                    {formatTimeWIB()}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                    {formatDateWIB()} WIB
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
@@ -175,8 +219,8 @@ const Dashboard = () => {
                                 >
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${t.type === 'income'
-                                                ? 'bg-green-500/10 text-green-500'
-                                                : 'bg-red-500/10 text-red-500'
+                                            ? 'bg-green-500/10 text-green-500'
+                                            : 'bg-red-500/10 text-red-500'
                                             }`}>
                                             {t.type === 'income' ? '+' : '-'}
                                         </div>
