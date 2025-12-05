@@ -1,11 +1,11 @@
 import clsx from 'clsx';
 import { differenceInDays, format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Calendar, CreditCard, Eye, Trash2 } from 'lucide-react';
+import { Calendar, CreditCard, Edit2, Eye, Trash2 } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { calculateProgress, getPaidCount, getRemainingBalance } from '../utils/debtHelpers';
 
-const DebtCard = ({ debt, onViewDetails, onDelete }) => {
+const DebtCard = ({ debt, onViewDetails, onEdit, onDelete }) => {
     const progress = calculateProgress(debt.payments);
     const remaining = getRemainingBalance(debt.totalAmount, debt.payments);
     const paidCount = getPaidCount(debt.payments);
@@ -184,11 +184,19 @@ const DebtCard = ({ debt, onViewDetails, onDelete }) => {
                     className="flex-1 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all"
                 >
                     <Eye className="w-4 h-4" />
-                    View Details
+                    View
+                </button>
+                <button
+                    onClick={() => onEdit(debt)}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-amber-600 text-slate-400 hover:text-white rounded-lg transition-all"
+                    title="Edit Debt"
+                >
+                    <Edit2 className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => onDelete(debt.id)}
                     className="px-4 py-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-lg transition-all"
+                    title="Delete Debt"
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -200,6 +208,7 @@ const DebtCard = ({ debt, onViewDetails, onDelete }) => {
 DebtCard.propTypes = {
     debt: PropTypes.object.isRequired,
     onViewDetails: PropTypes.func.isRequired,
+    onEdit: PropTypes.func.isRequired,
     onDelete: PropTypes.func.isRequired,
 };
 

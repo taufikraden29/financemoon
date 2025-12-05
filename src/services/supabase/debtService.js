@@ -150,6 +150,49 @@ export const debtService = {
         return transformPaymentFromDB(data)
     },
 
+    // Update debt
+    async update(id, updateData) {
+        const updates = {}
+        if (updateData.name) updates.name = updateData.name
+        if (updateData.totalAmount) {
+            updates.total_amount = updateData.totalAmount
+            // Recalculate per installment if total amount changed
+            const { data: currentDebt } = await supabase
+                .from('debts')
+                .select('installments')
+                .eq('id', id)
+                .single()
+
+            if (currentDebt) {
+                updates.per_installment = updateData.totalAmount / currentDebt.installments
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('debts')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single()
+
+        if (error) throw error
+        return transformDebtFromDB(data)
+    },
+
+    // Update payment due date
+    async updatePaymentDueDate(debtId, installmentNumber, newDueDate) {
+        const { data, error } = await supabase
+            .from('debt_payments')
+            .update({ due_date: newDueDate })
+            .eq('debt_id', debtId)
+            .eq('installment_number', installmentNumber)
+            .select()
+            .single()
+
+        if (error) throw error
+        return transformPaymentFromDB(data)
+    },
+
     // Delete debt (cascade deletes payments)
     async delete(id) {
         const { error } = await supabase

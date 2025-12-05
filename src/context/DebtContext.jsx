@@ -94,12 +94,36 @@ export const DebtProvider = ({ children }) => {
         }
     };
 
+    const updateDebt = async (debtId, updateData) => {
+        try {
+            await debtService.update(debtId, updateData);
+            await loadDebts(); // Reload to get fresh data
+            showToast('Debt updated successfully', 'success');
+        } catch (err) {
+            console.error('Error updating debt:', err);
+            showToast('Failed to update debt', 'error');
+        }
+    };
+
+    const updatePaymentDueDate = async (debtId, installmentNumber, newDueDate) => {
+        try {
+            await debtService.updatePaymentDueDate(debtId, installmentNumber, newDueDate);
+            // Don't reload here - we'll reload after all updates are done
+        } catch (err) {
+            console.error('Error updating payment due date:', err);
+            showToast('Failed to update payment date', 'error');
+            throw err;
+        }
+    };
+
     return (
         <DebtContext.Provider value={{
             debts,
             loading,
             error,
             addDebt,
+            updateDebt,
+            updatePaymentDueDate,
             markPayment,
             unmarkPayment,
             deleteDebt,

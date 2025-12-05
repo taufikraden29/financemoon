@@ -4,6 +4,7 @@ import AddDebtModal from '../components/AddDebtModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DebtCard from '../components/DebtCard';
 import DebtDetailModal from '../components/DebtDetailModal';
+import EditDebtModal from '../components/EditDebtModal';
 import { useDebt } from '../context/DebtContext';
 import { useToast } from '../context/ToastContext';
 import { isTelegramConfigured, sendTestMessage } from '../services/telegramService';
@@ -14,6 +15,8 @@ const Debts = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingDebt, setEditingDebt] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
     const [testingTelegram, setTestingTelegram] = useState(false);
 
@@ -39,6 +42,11 @@ const Debts = () => {
         setIsDetailModalOpen(true);
     };
 
+    const handleEdit = (debt) => {
+        setEditingDebt(debt);
+        setIsEditModalOpen(true);
+    };
+
     const handleDelete = (id) => {
         setDeleteConfirm({ isOpen: true, id });
     };
@@ -54,7 +62,19 @@ const Debts = () => {
         setDeleteConfirm({ isOpen: false, id: null });
     };
 
-    const activeDebts = debts.filter(d => d.status === 'active');
+    // Sort active debts by next unpaid payment due date (earliest first)
+    const activeDebts = debts
+        .filter(d => d.status === 'active')
+        .sort((a, b) => {
+            const aNextPayment = a.payments?.find(p => !p.paid);
+            const bNextPayment = b.payments?.find(p => !p.paid);
+
+            if (!aNextPayment?.dueDate) return 1;
+            if (!bNextPayment?.dueDate) return -1;
+
+            return new Date(aNextPayment.dueDate) - new Date(bNextPayment.dueDate);
+        });
+
     const completedDebts = debts.filter(d => d.status === 'completed');
 
     return (
@@ -124,6 +144,7 @@ const Debts = () => {
                                         key={debt.id}
                                         debt={debt}
                                         onViewDetails={handleViewDetails}
+                                        onEdit={handleEdit}
                                         onDelete={handleDelete}
                                     />
                                 ))}
@@ -146,6 +167,7 @@ const Debts = () => {
                                         key={debt.id}
                                         debt={debt}
                                         onViewDetails={handleViewDetails}
+                                        onEdit={handleEdit}
                                         onDelete={handleDelete}
                                     />
                                 ))}
@@ -164,6 +186,12 @@ const Debts = () => {
                 debt={selectedDebt}
                 isOpen={isDetailModalOpen}
                 onClose={() => setIsDetailModalOpen(false)}
+            />
+
+            <EditDebtModal
+                debt={editingDebt}
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
             />
 
             <ConfirmDialog
