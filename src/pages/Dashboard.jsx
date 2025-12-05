@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Plus } from 'lucide-react';
+import { Plus, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import AccountsOverview from '../components/AccountsOverview';
@@ -7,6 +7,7 @@ import AddTransactionModal from '../components/AddTransactionModal';
 import BalanceCard from '../components/BalanceCard';
 import BudgetSummary from '../components/BudgetSummary';
 import DebtSummaryCard from '../components/DebtSummaryCard';
+import RecurringSummary from '../components/RecurringSummary';
 import SavingsSummary from '../components/SavingsSummary';
 import StatsCard from '../components/StatsCard';
 import { useFinance } from '../context/FinanceContext';
@@ -14,6 +15,14 @@ import { useFinance } from '../context/FinanceContext';
 const Dashboard = () => {
     const { transactions, getBalance, getIncome, getExpense } = useFinance();
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Get greeting based on time
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 18) return 'Good Afternoon';
+        return 'Good Evening';
+    };
 
     // Sort transactions by date descending
     const sortedTransactions = [...transactions].sort(
@@ -31,54 +40,76 @@ const Dashboard = () => {
         }));
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
+            {/* Header */}
             <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-white">Dashboard</h2>
-                    <p className="text-slate-400 mt-1">Welcome back, here is your financial overview.</p>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">
+                        {getGreeting()} 👋
+                    </h2>
+                    <p className="text-slate-400 mt-1 text-sm md:text-base">
+                        Here's your financial overview
+                    </p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/20 active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/20 active:scale-95 text-sm md:text-base"
                 >
                     <Plus className="w-5 h-5" />
-                    Add Transaction
+                    <span className="hidden sm:inline">Add Transaction</span>
+                    <span className="sm:hidden">Add</span>
                 </button>
             </header>
 
-            {/* Balance Card - Prominent Saldo Display */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <BalanceCard />
-                <StatsCard title="Total Income" value={getIncome()} type="income" />
-            </div>
+            {/* Main Balance Card */}
+            <BalanceCard />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <StatsCard title="Net Balance" value={getBalance()} type="balance" />
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <StatsCard title="Total Income" value={getIncome()} type="income" />
                 <StatsCard title="Total Expense" value={getExpense()} type="expense" />
             </div>
 
-            {/* New Feature Summaries */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Feature Summaries */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <AccountsOverview />
                 <BudgetSummary />
+                <RecurringSummary />
                 <SavingsSummary />
             </div>
 
-            {/* Debt Summary Card */}
+            {/* Debt Summary */}
             <DebtSummaryCard />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                    <h3 className="text-xl font-bold text-white mb-6">Activity Overview</h3>
+            {/* Activity & Recent Transactions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                {/* Activity Chart */}
+                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6">
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">
+                        Activity Overview
+                    </h3>
                     {data.length === 0 ? (
-                        <div className="h-[300px] flex items-center justify-center">
+                        <div className="h-[250px] md:h-[300px] flex items-center justify-center">
                             <div className="text-center">
-                                <p className="text-slate-500 mb-2">No transaction data yet</p>
-                                <p className="text-sm text-slate-600">Add transactions to see your activity chart</p>
+                                <div className="inline-flex p-4 bg-slate-800 rounded-full mb-4">
+                                    <TrendingUp className="w-10 h-10 md:w-12 md:h-12 text-slate-600" />
+                                </div>
+                                <h4 className="text-lg font-semibold text-white mb-2">
+                                    No Activity Yet
+                                </h4>
+                                <p className="text-slate-400 mb-4 text-sm">
+                                    Start tracking your finances
+                                </p>
+                                <button
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                                >
+                                    Add your first transaction
+                                </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[300px] w-full">
+                        <div className="h-[250px] md:h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={data}>
                                     <defs>
@@ -88,25 +119,47 @@ const Dashboard = () => {
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                                    <XAxis dataKey="name" stroke="#64748b" />
-                                    <YAxis stroke="#64748b" />
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke="#64748b"
+                                        style={{ fontSize: '12px' }}
+                                    />
+                                    <YAxis
+                                        stroke="#64748b"
+                                        style={{ fontSize: '12px' }}
+                                    />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#fff' }}
+                                        contentStyle={{
+                                            backgroundColor: '#0f172a',
+                                            borderColor: '#1e293b',
+                                            color: '#fff',
+                                            borderRadius: '8px',
+                                            fontSize: '12px'
+                                        }}
                                         itemStyle={{ color: '#fff' }}
                                     />
-                                    <Area type="monotone" dataKey="amount" stroke="#3b82f6" fillOpacity={1} fill="url(#colorAmount)" />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="amount"
+                                        stroke="#3b82f6"
+                                        fillOpacity={1}
+                                        fill="url(#colorAmount)"
+                                    />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     )}
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                    <h3 className="text-xl font-bold text-white mb-6">Recent Transactions</h3>
-                    <div className="space-y-4">
+                {/* Recent Transactions */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6">
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6">
+                        Recent Transactions
+                    </h3>
+                    <div className="space-y-3">
                         {sortedTransactions.length === 0 ? (
                             <div className="text-center py-8">
-                                <p className="text-slate-500 mb-2">No transactions yet</p>
+                                <p className="text-slate-500 mb-2 text-sm">No transactions yet</p>
                                 <button
                                     onClick={() => setIsModalOpen(true)}
                                     className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -116,18 +169,44 @@ const Dashboard = () => {
                             </div>
                         ) : (
                             sortedTransactions.slice(0, 5).map((t) => (
-                                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.type === 'income' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                <div
+                                    key={t.id}
+                                    className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${t.type === 'income'
+                                                ? 'bg-green-500/10 text-green-500'
+                                                : 'bg-red-500/10 text-red-500'
+                                            }`}>
                                             {t.type === 'income' ? '+' : '-'}
                                         </div>
-                                        <div>
-                                            <p className="font-medium text-white">{t.description}</p>
-                                            <p className="text-xs text-slate-400">{format(new Date(t.date), 'dd MMM yyyy')}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-medium text-white text-sm truncate">
+                                                {t.description}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-xs text-slate-400">
+                                                    {format(new Date(t.date), 'dd MMM yyyy')}
+                                                </span>
+                                                {t.category && (
+                                                    <>
+                                                        <span className="text-slate-600">•</span>
+                                                        <span className="text-xs px-2 py-0.5 bg-slate-800 rounded text-slate-400">
+                                                            {t.category}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                    <span className={`font-semibold ${t.type === 'income' ? 'text-green-400' : 'text-slate-200'}`}>
-                                        {t.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(t.amount)}
+                                    <span className={`font-semibold text-sm whitespace-nowrap ml-2 ${t.type === 'income' ? 'text-green-400' : 'text-slate-200'
+                                        }`}>
+                                        {t.type === 'income' ? '+' : '-'}
+                                        {new Intl.NumberFormat('id-ID', {
+                                            style: 'currency',
+                                            currency: 'IDR',
+                                            minimumFractionDigits: 0
+                                        }).format(t.amount)}
                                     </span>
                                 </div>
                             ))

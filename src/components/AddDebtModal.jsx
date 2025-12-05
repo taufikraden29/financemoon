@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { useDebt } from '../context/DebtContext';
 import { calculateInstallment, validateDebt } from '../utils/debtHelpers';
+import CurrencyInput from './CurrencyInput';
 
 const AddDebtModal = ({ isOpen, onClose }) => {
     const { addDebt } = useDebt();
@@ -73,15 +74,11 @@ const AddDebtModal = ({ isOpen, onClose }) => {
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-400">Total Amount (IDR) *</label>
-                        <input
-                            type="number"
-                            placeholder="0"
+                        <CurrencyInput
                             value={formData.totalAmount}
-                            onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
-                            className={clsx(
-                                "w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all font-mono text-lg",
-                                errors.totalAmount ? "border-red-500 focus:ring-red-500" : "border-slate-700 focus:ring-blue-500"
-                            )}
+                            onChange={(value) => setFormData({ ...formData, totalAmount: value })}
+                            placeholder="0"
+                            error={errors.totalAmount}
                         />
                         {errors.totalAmount && (
                             <p className="text-red-400 text-sm mt-1">{errors.totalAmount}</p>
