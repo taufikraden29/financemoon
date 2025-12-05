@@ -1,8 +1,7 @@
 import PropTypes from 'prop-types';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { checkDebtReminders } from '../services/reminderService';
-import { generatePaymentSchedule } from '../utils/debtHelpers';
+import { debtService } from '../services/supabase';
 import { useToast } from './ToastContext';
 
 const DebtContext = createContext();
@@ -12,115 +11,99 @@ export const useDebt = () => useContext(DebtContext);
 
 export const DebtProvider = ({ children }) => {
     const { showToast } = useToast();
-    const [debts, setDebts] = useState(() => {
-        const saved = localStorage.getItem('financial_moo_debts');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [debts, setDebts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    // Fetch debts on mount
     useEffect(() => {
-        localStorage.setItem('financial_moo_debts', JSON.stringify(debts));
-    }, [debts]);
+        loadDebts();
+    }, []);
 
-    // Check debt reminders on mount and daily
+    // Check debt reminders
     useEffect(() => {
-        // Check immediately on load
-        checkDebtReminders(debts);
-
-        // Check every 24 hours
-        const interval = setInterval(() => {
+        if (debts.length > 0) {
             checkDebtReminders(debts);
-        }, 1000 * 60 * 60 * 24); // 24 hours
 
-        return () => clearInterval(interval);
+            const interval = setInterval(() => {
+                checkDebtReminders(debts);
+            }, 1000 * 60 * 60 * 24); // 24 hours
+
+            return () => clearInterval(interval);
+        }
     }, [debts]);
 
-    const addDebt = (debtData) => {
-        const payments = generatePaymentSchedule(
-            parseFloat(debtData.totalAmount),
-            parseInt(debtData.installments)
-        );
-
-        const newDebt = {
-            id: uuidv4(),
-            name: debtData.name,
-            totalAmount: parseFloat(debtData.totalAmount),
-            installments: parseInt(debtData.installments),
-            perInstallment: parseFloat(debtData.totalAmount) / parseInt(debtData.installments),
-            payments,
-            createdDate: new Date().toISOString(),
-            status: 'active'
-        };
-
-        setDebts(prev => [newDebt, ...prev]);
-        showToast(`Debt "${debtData.name}" added successfully`, 'success');
+    const loadDebts = async () => {
+        try {
+            setLoading(true);
+            const data = await debtService.getAll();
+            setDebts(data);
+        } catch (err) {
+            console.error('Error loading debts:', err);
+            setError(err.message);
+            // Fallback to localStorage
+            const saved = localStorage.getItem('financial_moo_debts');
+            if (saved) setDebts(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const markPayment = (debtId, installmentNumber) => {
-        setDebts(prev => prev.map(debt => {
-            if (debt.id === debtId) {
-                const updatedPayments = debt.payments.map(payment => {
-                    if (payment.installmentNumber === installmentNumber && !payment.paid) {
-                        return {
-                            ...payment,
-                            paid: true,
-                            paidDate: new Date().toISOString()
-                        };
-                    }
-                    return payment;
-                });
-
-                const allPaid = updatedPayments.every(p => p.paid);
-
-                return {
-                    ...debt,
-                    payments: updatedPayments,
-                    status: allPaid ? 'completed' : 'active'
-                };
-            }
-            return debt;
-        }));
-
-        showToast('Payment marked as paid', 'success');
+    const addDebt = async (debtData) => {
+        try {
+            const newDebt = await debtService.add(debtData);
+            setDebts(prev => [newDebt, ...prev]);
+            showToast(`Debt "${debtData.name}" added successfully`, 'success');
+        } catch (err) {
+            console.error('Error adding debt:', err);
+            showToast('Failed to add debt', 'error');
+        }
     };
 
-    const unmarkPayment = (debtId, installmentNumber) => {
-        setDebts(prev => prev.map(debt => {
-            if (debt.id === debtId) {
-                const updatedPayments = debt.payments.map(payment => {
-                    if (payment.installmentNumber === installmentNumber && payment.paid) {
-                        return {
-                            ...payment,
-                            paid: false,
-                            paidDate: null
-                        };
-                    }
-                    return payment;
-                });
-
-                return {
-                    ...debt,
-                    payments: updatedPayments,
-                    status: 'active'
-                };
-            }
-            return debt;
-        }));
-
-        showToast('Payment unmarked', 'info');
+    const markPayment = async (debtId, installmentNumber) => {
+        try {
+            await debtService.markPayment(debtId, installmentNumber);
+            // Reload to get fresh data with status updates
+            await loadDebts();
+            showToast('Payment marked as paid', 'success');
+        } catch (err) {
+            console.error('Error marking payment:', err);
+            showToast('Failed to mark payment', 'error');
+        }
     };
 
-    const deleteDebt = (debtId) => {
-        setDebts(prev => prev.filter(d => d.id !== debtId));
-        showToast('Debt deleted', 'success');
+    const unmarkPayment = async (debtId, installmentNumber) => {
+        try {
+            await debtService.unmarkPayment(debtId, installmentNumber);
+            await loadDebts();
+            showToast('Payment unmarked', 'info');
+        } catch (err) {
+            console.error('Error unmarking payment:', err);
+            showToast('Failed to unmark payment', 'error');
+        }
+    };
+
+    const deleteDebt = async (debtId) => {
+        try {
+            await debtService.delete(debtId);
+            setDebts(prev => prev.filter(d => d.id !== debtId));
+            showToast('Debt deleted', 'success');
+        } catch (err) {
+            console.error('Error deleting debt:', err);
+            showToast('Failed to delete debt', 'error');
+        }
     };
 
     return (
         <DebtContext.Provider value={{
             debts,
+            loading,
+            error,
             addDebt,
             markPayment,
             unmarkPayment,
-            deleteDebt
+            deleteDebt,
+            refreshDebts: loadDebts
         }}>
             {children}
         </DebtContext.Provider>

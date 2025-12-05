@@ -1,7 +1,7 @@
 import { addDays, addMonths, addWeeks, addYears, format, isBefore, isToday, parseISO } from 'date-fns';
 import PropTypes from 'prop-types';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { recurringService } from '../services/supabase';
 import { useAccount } from './AccountContext';
 import { useActivity } from './ActivityContext';
 import { useBudget } from './BudgetContext';
@@ -20,36 +20,47 @@ export const useRecurring = () => {
 
 export const RecurringTransactionProvider = ({ children }) => {
     const [recurringTransactions, setRecurringTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const { showToast } = useToast();
     const { addTransaction } = useFinance();
     const { updateBalance } = useAccount();
     const { updateSpent } = useBudget();
     const { logActivity } = useActivity();
 
-    // Load from localStorage
+    // Load from Supabase on mount
     useEffect(() => {
-        const stored = localStorage.getItem('financial_moo_recurring');
-        if (stored) {
-            setRecurringTransactions(JSON.parse(stored));
-        }
+        loadRecurring();
     }, []);
 
-    // Save to localStorage
+    // Auto-generate on data change
     useEffect(() => {
-        localStorage.setItem('financial_moo_recurring', JSON.stringify(recurringTransactions));
-    }, [recurringTransactions]);
-
-    // Auto-generate on mount and date change
-    useEffect(() => {
-        generateDueTransactions();
-
-        // Check daily for new transactions
-        const interval = setInterval(() => {
+        if (recurringTransactions.length > 0) {
             generateDueTransactions();
-        }, 1000 * 60 * 60); // Check every hour
 
-        return () => clearInterval(interval);
+            const interval = setInterval(() => {
+                generateDueTransactions();
+            }, 1000 * 60 * 60); // Check every hour
+
+            return () => clearInterval(interval);
+        }
     }, [recurringTransactions]);
+
+    const loadRecurring = async () => {
+        try {
+            setLoading(true);
+            const data = await recurringService.getAll();
+            setRecurringTransactions(data);
+        } catch (err) {
+            console.error('Error loading recurring:', err);
+            setError(err.message);
+            // Fallback to localStorage
+            const stored = localStorage.getItem('financial_moo_recurring');
+            if (stored) setRecurringTransactions(JSON.parse(stored));
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Calculate next occurrence based on recurrence type
     const calculateNextOccurrence = (recurring) => {
@@ -70,103 +81,115 @@ export const RecurringTransactionProvider = ({ children }) => {
     };
 
     // Generate transactions that are due
-    const generateDueTransactions = () => {
+    const generateDueTransactions = async () => {
         const today = new Date();
 
-        recurringTransactions
-            .filter(r => r.isActive)
-            .forEach(recurring => {
-                const nextDate = parseISO(recurring.nextOccurrence);
+        for (const recurring of recurringTransactions.filter(r => r.isActive)) {
+            const nextDate = parseISO(recurring.nextOccurrence);
 
-                // If next occurrence is today or past
-                if (isBefore(nextDate, today) || isToday(nextDate)) {
-                    // Check if end date is set and passed
-                    if (recurring.endDate && isBefore(parseISO(recurring.endDate), today)) {
-                        return; // Don't generate if past end date
-                    }
-
-                    // Create transaction
-                    const transaction = {
-                        type: recurring.type,
-                        amount: recurring.amount,
-                        description: recurring.name,
-                        category: recurring.category,
-                        accountId: recurring.accountId,
-                        date: format(nextDate, 'yyyy-MM-dd'),
-                        recurringId: recurring.id,
-                        isFromRecurring: true
-                    };
-
-                    addTransaction(transaction);
-
-                    // Update account balance if linked
-                    if (recurring.accountId) {
-                        if (recurring.type === 'income') {
-                            updateBalance(recurring.accountId, recurring.amount, 'add');
-                        } else {
-                            updateBalance(recurring.accountId, recurring.amount, 'subtract');
-                        }
-                    }
-
-                    // Update budget if expense
-                    if (recurring.type === 'expense') {
-                        updateSpent(recurring.category, recurring.amount);
-                    }
-
-                    // Log activity
-                    logActivity(
-                        'recurring_generated',
-                        `Auto-generated: ${recurring.name}`,
-                        recurring.amount,
-                        { recurringId: recurring.id }
-                    );
-
-                    // Update next occurrence
-                    const newNext = calculateNextOccurrence(recurring);
-                    updateRecurring(recurring.id, {
-                        lastGenerated: format(today, 'yyyy-MM-dd'),
-                        nextOccurrence: newNext
-                    });
-
-                    showToast(`Auto-generated: ${recurring.name}`, 'success');
+            // If next occurrence is today or past
+            if (isBefore(nextDate, today) || isToday(nextDate)) {
+                // Check if end date is set and passed
+                if (recurring.endDate && isBefore(parseISO(recurring.endDate), today)) {
+                    continue;
                 }
-            });
+
+                // Create transaction
+                const transaction = {
+                    type: recurring.type,
+                    amount: recurring.amount,
+                    description: recurring.name,
+                    category: recurring.category,
+                    accountId: recurring.accountId,
+                    date: format(nextDate, 'yyyy-MM-dd'),
+                    recurringId: recurring.id,
+                    isFromRecurring: true
+                };
+
+                await addTransaction(transaction);
+
+                // Update account balance if linked
+                if (recurring.accountId) {
+                    if (recurring.type === 'income') {
+                        await updateBalance(recurring.accountId, recurring.amount, 'add');
+                    } else {
+                        await updateBalance(recurring.accountId, recurring.amount, 'subtract');
+                    }
+                }
+
+                // Update budget if expense
+                if (recurring.type === 'expense') {
+                    await updateSpent(recurring.category, recurring.amount);
+                }
+
+                // Log activity
+                logActivity(
+                    'recurring_generated',
+                    `Auto-generated: ${recurring.name}`,
+                    recurring.amount,
+                    { recurringId: recurring.id }
+                );
+
+                // Update next occurrence
+                const newNext = calculateNextOccurrence(recurring);
+                await updateRecurring(recurring.id, {
+                    lastGenerated: format(today, 'yyyy-MM-dd'),
+                    nextOccurrence: newNext
+                });
+
+                showToast(`Auto-generated: ${recurring.name}`, 'success');
+            }
+        }
     };
 
     // Add new recurring transaction
-    const addRecurring = (data) => {
-        const newRecurring = {
-            id: uuidv4(),
-            ...data,
-            isActive: true,
-            lastGenerated: null,
-            nextOccurrence: data.startDate,
-            createdAt: new Date().toISOString()
-        };
-
-        setRecurringTransactions(prev => [...prev, newRecurring]);
-        showToast('Recurring transaction created', 'success');
-        return newRecurring;
+    const addRecurring = async (data) => {
+        try {
+            const newRecurring = await recurringService.add(data);
+            setRecurringTransactions(prev => [...prev, newRecurring]);
+            showToast('Recurring transaction created', 'success');
+            return newRecurring;
+        } catch (err) {
+            console.error('Error adding recurring:', err);
+            showToast('Failed to create recurring transaction', 'error');
+            return null;
+        }
     };
 
     // Update recurring transaction
-    const updateRecurring = (id, updates) => {
-        setRecurringTransactions(prev =>
-            prev.map(r => r.id === id ? { ...r, ...updates } : r)
-        );
+    const updateRecurring = async (id, updates) => {
+        try {
+            const updated = await recurringService.update(id, updates);
+            setRecurringTransactions(prev =>
+                prev.map(r => r.id === id ? updated : r)
+            );
+        } catch (err) {
+            console.error('Error updating recurring:', err);
+        }
     };
 
     // Delete recurring transaction
-    const deleteRecurring = (id) => {
-        setRecurringTransactions(prev => prev.filter(r => r.id !== id));
-        showToast('Recurring transaction deleted', 'success');
+    const deleteRecurring = async (id) => {
+        try {
+            await recurringService.delete(id);
+            setRecurringTransactions(prev => prev.filter(r => r.id !== id));
+            showToast('Recurring transaction deleted', 'success');
+        } catch (err) {
+            console.error('Error deleting recurring:', err);
+            showToast('Failed to delete recurring transaction', 'error');
+        }
     };
 
     // Toggle active status
-    const toggleActive = (id) => {
-        setRecurringTransactions(prev =>
-            prev.map(r => r.id === id ? { ...r, isActive: !r.isActive } : r)
-        );
+    const toggleActive = async (id) => {
+        try {
+            const updated = await recurringService.toggleActive(id);
+            setRecurringTransactions(prev =>
+                prev.map(r => r.id === id ? updated : r)
+            );
+        } catch (err) {
+            console.error('Error toggling active:', err);
+        }
     };
 
     // Get upcoming recurring transactions
@@ -196,6 +219,8 @@ export const RecurringTransactionProvider = ({ children }) => {
 
     const value = {
         recurringTransactions,
+        loading,
+        error,
         addRecurring,
         updateRecurring,
         deleteRecurring,
@@ -204,7 +229,8 @@ export const RecurringTransactionProvider = ({ children }) => {
         getUpcoming,
         getActiveCount,
         getMonthlyTotal,
-        calculateNextOccurrence
+        calculateNextOccurrence,
+        refreshRecurring: loadRecurring
     };
 
     return (

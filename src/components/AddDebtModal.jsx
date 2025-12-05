@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { X } from 'lucide-react';
+import { addMonths, format } from 'date-fns';
+import { Bell, X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { useDebt } from '../context/DebtContext';
@@ -11,13 +12,21 @@ const AddDebtModal = ({ isOpen, onClose }) => {
     const [formData, setFormData] = useState({
         name: '',
         totalAmount: '',
-        installments: ''
+        installments: '',
+        firstDueDate: format(addMonths(new Date(), 1), 'yyyy-MM-dd'),
+        reminderDays: '3'
     });
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (isOpen) {
-            setFormData({ name: '', totalAmount: '', installments: '' });
+            setFormData({
+                name: '',
+                totalAmount: '',
+                installments: '',
+                firstDueDate: format(addMonths(new Date(), 1), 'yyyy-MM-dd'),
+                reminderDays: '3'
+            });
             setErrors({});
         }
     }, [isOpen]);
@@ -39,14 +48,18 @@ const AddDebtModal = ({ isOpen, onClose }) => {
         }
 
         setErrors({});
-        addDebt(formData);
+        addDebt({
+            ...formData,
+            dueDate: formData.firstDueDate,
+            reminderDays: parseInt(formData.reminderDays)
+        });
         onClose();
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+            <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 sticky top-0">
                     <h3 className="text-xl font-bold text-white">Add New Debt</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
                         <X className="w-6 h-6" />
@@ -102,6 +115,43 @@ const AddDebtModal = ({ isOpen, onClose }) => {
                         {errors.installments && (
                             <p className="text-red-400 text-sm mt-1">{errors.installments}</p>
                         )}
+                    </div>
+
+                    {/* Due Date & Reminder Section */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-400">First Due Date</label>
+                            <input
+                                type="date"
+                                value={formData.firstDueDate}
+                                onChange={(e) => setFormData({ ...formData, firstDueDate: e.target.value })}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                                <Bell className="w-4 h-4" />
+                                Remind Before
+                            </label>
+                            <select
+                                value={formData.reminderDays}
+                                onChange={(e) => setFormData({ ...formData, reminderDays: e.target.value })}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            >
+                                <option value="1">1 day</option>
+                                <option value="3">3 days</option>
+                                <option value="5">5 days</option>
+                                <option value="7">7 days</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Telegram Reminder Note */}
+                    <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                        <Bell className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-amber-200/80">
+                            Reminders will be sent to Telegram bot. Make sure <code className="bg-slate-800 px-1 rounded">VITE_TELEGRAM_BOT_TOKEN</code> and <code className="bg-slate-800 px-1 rounded">VITE_TELEGRAM_CHAT_ID</code> are configured in .env
+                        </p>
                     </div>
 
                     {/* Preview Section */}

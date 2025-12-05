@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { activityService } from '../services/supabase';
 
 const ActivityContext = createContext();
 
@@ -8,26 +8,39 @@ const ActivityContext = createContext();
 export const useActivity = () => useContext(ActivityContext);
 
 export const ActivityProvider = ({ children }) => {
-    const [activities, setActivities] = useState(() => {
-        const saved = localStorage.getItem('financial_moo_activities');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [activities, setActivities] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    // Fetch activities on mount
     useEffect(() => {
-        localStorage.setItem('financial_moo_activities', JSON.stringify(activities));
-    }, [activities]);
+        loadActivities();
+    }, []);
 
-    const logActivity = useCallback((type, action, amount = null, details = {}) => {
-        const activity = {
-            id: uuidv4(),
-            type, // 'transaction', 'debt', 'savings', 'transfer', 'budget'
-            action,
-            amount,
-            details,
-            timestamp: new Date().toISOString()
-        };
+    const loadActivities = async () => {
+        try {
+            setLoading(true);
+            const data = await activityService.getAll();
+            setActivities(data);
+        } catch (err) {
+            console.error('Error loading activities:', err);
+            setError(err.message);
+            // Fallback to localStorage
+            const saved = localStorage.getItem('financial_moo_activities');
+            if (saved) setActivities(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        setActivities(prev => [activity, ...prev]);
+    const logActivity = useCallback(async (type, action, amount = null, details = {}) => {
+        try {
+            const activity = await activityService.log(type, action, amount, details);
+            setActivities(prev => [activity, ...prev]);
+        } catch (err) {
+            console.error('Error logging activity:', err);
+            // Don't show error to user for activity logging failures
+        }
     }, []);
 
     const getFilteredActivities = (filter = 'all') => {
@@ -43,17 +56,25 @@ export const ActivityProvider = ({ children }) => {
         );
     };
 
-    const clearActivities = () => {
-        setActivities([]);
+    const clearActivities = async () => {
+        try {
+            await activityService.clearAll();
+            setActivities([]);
+        } catch (err) {
+            console.error('Error clearing activities:', err);
+        }
     };
 
     return (
         <ActivityContext.Provider value={{
             activities,
+            loading,
+            error,
             logActivity,
             getFilteredActivities,
             searchActivities,
-            clearActivities
+            clearActivities,
+            refreshActivities: loadActivities
         }}>
             {children}
         </ActivityContext.Provider>

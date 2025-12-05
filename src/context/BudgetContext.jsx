@@ -1,7 +1,7 @@
 import { format, startOfMonth } from 'date-fns';
 import PropTypes from 'prop-types';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { budgetService } from '../services/supabase';
 import { useToast } from './ToastContext';
 
 const BudgetContext = createContext();
@@ -11,57 +11,84 @@ export const useBudget = () => useContext(BudgetContext);
 
 export const BudgetProvider = ({ children }) => {
     const { showToast } = useToast();
-    const [budgets, setBudgets] = useState(() => {
-        const saved = localStorage.getItem('financial_moo_budgets');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [budgets, setBudgets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    // Fetch budgets on mount
     useEffect(() => {
-        localStorage.setItem('financial_moo_budgets', JSON.stringify(budgets));
-    }, [budgets]);
+        loadBudgets();
+    }, []);
 
-    const addBudget = (budgetData) => {
-        const currentMonth = format(startOfMonth(new Date()), 'yyyy-MM');
-        const newBudget = {
-            id: uuidv4(),
-            ...budgetData,
-            limit: parseFloat(budgetData.limit),
-            spent: 0,
-            month: currentMonth,
-            alertThreshold: budgetData.alertThreshold || 80,
-            status: 'safe'
-        };
-        setBudgets(prev => [...prev, newBudget]);
-        showToast(`Budget for "${budgetData.category}" set`, 'success');
+    const loadBudgets = async () => {
+        try {
+            setLoading(true);
+            const data = await budgetService.getAll();
+            setBudgets(data);
+        } catch (err) {
+            console.error('Error loading budgets:', err);
+            setError(err.message);
+            // Fallback to localStorage
+            const saved = localStorage.getItem('financial_moo_budgets');
+            if (saved) setBudgets(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const updateBudget = (id, updates) => {
-        setBudgets(prev => prev.map(budget =>
-            budget.id === id ? { ...budget, ...updates } : budget
-        ));
-        showToast('Budget updated', 'success');
+    const addBudget = async (budgetData) => {
+        try {
+            const currentMonth = format(startOfMonth(new Date()), 'yyyy-MM');
+            const newBudget = await budgetService.add({
+                ...budgetData,
+                limit: parseFloat(budgetData.limit),
+                spent: 0,
+                month: currentMonth,
+                alertThreshold: budgetData.alertThreshold || 80,
+                status: 'safe'
+            });
+            setBudgets(prev => [...prev, newBudget]);
+            showToast(`Budget for "${budgetData.category}" set`, 'success');
+        } catch (err) {
+            console.error('Error adding budget:', err);
+            showToast('Failed to add budget', 'error');
+        }
     };
 
-    const deleteBudget = (id) => {
-        setBudgets(prev => prev.filter(b => b.id !== id));
-        showToast('Budget deleted', 'success');
+    const updateBudget = async (id, updates) => {
+        try {
+            const updated = await budgetService.update(id, updates);
+            setBudgets(prev => prev.map(budget => budget.id === id ? updated : budget));
+            showToast('Budget updated', 'success');
+        } catch (err) {
+            console.error('Error updating budget:', err);
+            showToast('Failed to update budget', 'error');
+        }
     };
 
-    const updateSpent = useCallback((category, amount) => {
-        const currentMonth = format(startOfMonth(new Date()), 'yyyy-MM');
-        setBudgets(prev => prev.map(budget => {
-            if (budget.category === category && budget.month === currentMonth) {
-                const newSpent = budget.spent + amount;
-                const percentage = (newSpent / budget.limit) * 100;
+    const deleteBudget = async (id) => {
+        try {
+            await budgetService.delete(id);
+            setBudgets(prev => prev.filter(b => b.id !== id));
+            showToast('Budget deleted', 'success');
+        } catch (err) {
+            console.error('Error deleting budget:', err);
+            showToast('Failed to delete budget', 'error');
+        }
+    };
 
-                let status = 'safe';
-                if (newSpent >= budget.limit) status = 'exceeded';
-                else if (percentage >= budget.alertThreshold) status = 'warning';
-
-                return { ...budget, spent: newSpent, status };
+    const updateSpent = useCallback(async (category, amount) => {
+        try {
+            const currentMonth = format(startOfMonth(new Date()), 'yyyy-MM');
+            const result = await budgetService.updateSpent(category, currentMonth, amount);
+            if (result) {
+                setBudgets(prev => prev.map(budget =>
+                    budget.id === result.id ? result : budget
+                ));
             }
-            return budget;
-        }));
+        } catch (err) {
+            console.error('Error updating spent:', err);
+        }
     }, []);
 
     const getBudgetByCategory = (category) => {
@@ -77,12 +104,15 @@ export const BudgetProvider = ({ children }) => {
     return (
         <BudgetContext.Provider value={{
             budgets,
+            loading,
+            error,
             addBudget,
             updateBudget,
             deleteBudget,
             updateSpent,
             getBudgetByCategory,
-            getCurrentMonthBudgets
+            getCurrentMonthBudgets,
+            refreshBudgets: loadBudgets
         }}>
             {children}
         </BudgetContext.Provider>

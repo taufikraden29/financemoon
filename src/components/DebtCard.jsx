@@ -1,5 +1,7 @@
 import clsx from 'clsx';
-import { CreditCard, Eye, Trash2 } from 'lucide-react';
+import { differenceInDays, format, parseISO } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { Calendar, CreditCard, Eye, Trash2 } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { calculateProgress, getPaidCount, getRemainingBalance } from '../utils/debtHelpers';
 
@@ -8,6 +10,55 @@ const DebtCard = ({ debt, onViewDetails, onDelete }) => {
     const remaining = getRemainingBalance(debt.totalAmount, debt.payments);
     const paidCount = getPaidCount(debt.payments);
     const isCompleted = debt.status === 'completed';
+
+    // Find next unpaid payment
+    const nextPayment = debt.payments?.find(p => !p.paid);
+    const daysUntilDue = nextPayment?.dueDate
+        ? differenceInDays(parseISO(nextPayment.dueDate), new Date())
+        : null;
+
+    // Determine urgency
+    const getUrgencyClass = () => {
+        if (daysUntilDue === null || isCompleted) return 'text-slate-400';
+        if (daysUntilDue < 0) return 'text-red-400'; // Overdue
+        if (daysUntilDue <= 3) return 'text-red-400';
+        if (daysUntilDue <= 7) return 'text-amber-400';
+        return 'text-emerald-400';
+    };
+
+    const getDueBadge = () => {
+        if (isCompleted || !nextPayment?.dueDate) return null;
+
+        if (daysUntilDue < 0) {
+            return (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+                    Overdue {Math.abs(daysUntilDue)} days
+                </span>
+            );
+        }
+        if (daysUntilDue === 0) {
+            return (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
+                    Due Today!
+                </span>
+            );
+        }
+        if (daysUntilDue <= 3) {
+            return (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+                    {daysUntilDue} days left
+                </span>
+            );
+        }
+        if (daysUntilDue <= 7) {
+            return (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    {daysUntilDue} days left
+                </span>
+            );
+        }
+        return null;
+    };
 
     return (
         <div className={clsx(
@@ -23,13 +74,44 @@ const DebtCard = ({ debt, onViewDetails, onDelete }) => {
                 </div>
                 <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-bold text-white mb-1 truncate">{debt.name}</h3>
-                    {isCompleted && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/30">
-                            ✓ Completed
-                        </span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {isCompleted && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/30">
+                                ✓ Completed
+                            </span>
+                        )}
+                        {getDueBadge()}
+                    </div>
                 </div>
             </div>
+
+            {/* Next Payment Due Date */}
+            {nextPayment?.dueDate && !isCompleted && (
+                <div className={clsx(
+                    "flex items-center gap-2 mb-4 p-3 rounded-xl border",
+                    daysUntilDue !== null && daysUntilDue <= 3
+                        ? "bg-red-500/10 border-red-500/30"
+                        : "bg-slate-800/50 border-slate-700"
+                )}>
+                    <Calendar className={clsx("w-4 h-4", getUrgencyClass())} />
+                    <div className="flex-1">
+                        <p className="text-xs text-slate-400">Next Payment</p>
+                        <p className={clsx("text-sm font-semibold", getUrgencyClass())}>
+                            {format(parseISO(nextPayment.dueDate), 'd MMMM yyyy', { locale: id })}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs text-slate-400">Amount</p>
+                        <p className="text-sm font-semibold text-white">
+                            {new Intl.NumberFormat('id-ID', {
+                                style: 'currency',
+                                currency: 'IDR',
+                                minimumFractionDigits: 0
+                            }).format(nextPayment.amount)}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -122,3 +204,4 @@ DebtCard.propTypes = {
 };
 
 export default DebtCard;
+

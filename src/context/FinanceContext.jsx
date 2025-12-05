@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { transactionService } from '../services/supabase';
 import { useToast } from './ToastContext';
 
 const FinanceContext = createContext();
@@ -10,48 +10,71 @@ export const useFinance = () => useContext(FinanceContext);
 
 export const FinanceProvider = ({ children }) => {
     const { showToast } = useToast();
-    const [transactions, setTransactions] = useState(() => {
-        const saved = localStorage.getItem('financial_moo_transactions');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    // Fetch transactions on mount
     useEffect(() => {
-        localStorage.setItem('financial_moo_transactions', JSON.stringify(transactions));
-    }, [transactions]);
+        loadTransactions();
+    }, []);
 
-    const addTransaction = (transaction) => {
-        const newTransaction = {
-            id: uuidv4(),
-            date: new Date().toISOString(),
-            ...transaction,
-            amount: parseFloat(transaction.amount)
-        };
-        setTransactions(prev => [newTransaction, ...prev]);
-        showToast('Transaction added successfully', 'success');
+    const loadTransactions = async () => {
+        try {
+            setLoading(true);
+            const data = await transactionService.getAll();
+            setTransactions(data);
+        } catch (err) {
+            console.error('Error loading transactions:', err);
+            setError(err.message);
+            // Fallback to localStorage
+            const saved = localStorage.getItem('financial_moo_transactions');
+            if (saved) setTransactions(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const updateTransaction = (id, updatedData) => {
-        setTransactions(prev =>
-            prev.map(t =>
-                t.id === id
-                    ? { ...t, ...updatedData, amount: parseFloat(updatedData.amount) }
-                    : t
-            )
-        );
-        showToast('Transaction updated successfully', 'success');
+    const addTransaction = useCallback(async (transaction) => {
+        try {
+            const newTransaction = await transactionService.add({
+                ...transaction,
+                date: transaction.date || new Date().toISOString(),
+                amount: parseFloat(transaction.amount)
+            });
+            setTransactions(prev => [newTransaction, ...prev]);
+            showToast('Transaction added successfully', 'success');
+            return newTransaction;
+        } catch (err) {
+            console.error('Error adding transaction:', err);
+            showToast('Failed to add transaction', 'error');
+            return null;
+        }
+    }, [showToast]);
+
+    const updateTransaction = async (id, updatedData) => {
+        try {
+            const updated = await transactionService.update(id, {
+                ...updatedData,
+                amount: parseFloat(updatedData.amount)
+            });
+            setTransactions(prev => prev.map(t => t.id === id ? updated : t));
+            showToast('Transaction updated successfully', 'success');
+        } catch (err) {
+            console.error('Error updating transaction:', err);
+            showToast('Failed to update transaction', 'error');
+        }
     };
 
-    const deleteTransaction = (id) => {
-        const transaction = transactions.find(t => t.id === id);
-
-        if (!transaction) return;
-
-        // Import contexts - we'll need to pass these as props or use directly
-        // Rollback account balance if transaction was linked to an account
-        // This will be handled by passing updateBalance and updateSpent from parent
-
-        setTransactions(prev => prev.filter(t => t.id !== id));
-        showToast('Transaction deleted', 'success');
+    const deleteTransaction = async (id) => {
+        try {
+            await transactionService.delete(id);
+            setTransactions(prev => prev.filter(t => t.id !== id));
+            showToast('Transaction deleted', 'success');
+        } catch (err) {
+            console.error('Error deleting transaction:', err);
+            showToast('Failed to delete transaction', 'error');
+        }
     };
 
     const getBalance = () => {
@@ -80,12 +103,15 @@ export const FinanceProvider = ({ children }) => {
     return (
         <FinanceContext.Provider value={{
             transactions,
+            loading,
+            error,
             addTransaction,
             updateTransaction,
             deleteTransaction,
             getBalance,
             getIncome,
-            getExpense
+            getExpense,
+            refreshTransactions: loadTransactions
         }}>
             {children}
         </FinanceContext.Provider>

@@ -1,11 +1,14 @@
 import clsx from 'clsx';
-import { CreditCard, DollarSign, Landmark, LayoutDashboard, PieChart, Receipt, RefreshCw, Wallet, X } from 'lucide-react';
+import { CreditCard, DollarSign, Landmark, LayoutDashboard, LogOut, PieChart, Receipt, RefreshCw, Wallet, X } from 'lucide-react';
 import PropTypes from 'prop-types';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useFinance } from '../context/FinanceContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const { getBalance } = useFinance();
+    const { logout } = useAuth();
+    const navigate = useNavigate();
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -16,6 +19,11 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: PieChart, label: 'Analytics', path: '/analytics' },
         { icon: CreditCard, label: 'Debts', path: '/debts' },
     ];
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
         <aside
@@ -63,7 +71,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 ))}
             </nav>
 
-            <div className="p-4 border-t border-slate-800">
+            <div className="p-4 border-t border-slate-800 space-y-3">
                 <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
                     <p className="text-xs text-slate-400 mb-1">Total Balance</p>
                     <p className="text-lg font-bold text-white">
@@ -75,6 +83,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                         }).format(getBalance())}
                     </p>
                 </div>
+
+                {/* Logout Button */}
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200"
+                >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-medium">Logout</span>
+                </button>
             </div>
         </aside>
     );
@@ -86,3 +103,4 @@ Sidebar.propTypes = {
 };
 
 export default Sidebar;
+

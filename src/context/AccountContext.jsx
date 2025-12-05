@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { accountService } from '../services/supabase';
 import { useToast } from './ToastContext';
 
 const AccountContext = createContext();
@@ -9,68 +9,100 @@ const AccountContext = createContext();
 export const useAccount = () => useContext(AccountContext);
 
 const DEFAULT_ACCOUNTS = [
-    { id: uuidv4(), name: 'Cash', type: 'cash', balance: 0, icon: 'Wallet', color: 'green', isActive: true },
-    { id: uuidv4(), name: 'Bank Account', type: 'bank', balance: 0, icon: 'Building2', color: 'blue', isActive: true },
-    { id: uuidv4(), name: 'E-Wallet', type: 'ewallet', balance: 0, icon: 'Smartphone', color: 'purple', isActive: true },
+    { name: 'Cash', type: 'cash', balance: 0, icon: 'Wallet', color: 'green', isActive: true },
+    { name: 'Bank Account', type: 'bank', balance: 0, icon: 'Building2', color: 'blue', isActive: true },
+    { name: 'E-Wallet', type: 'ewallet', balance: 0, icon: 'Smartphone', color: 'purple', isActive: true },
 ];
 
 export const AccountProvider = ({ children }) => {
     const { showToast } = useToast();
-    const [accounts, setAccounts] = useState(() => {
-        const saved = localStorage.getItem('financial_moo_accounts');
-        return saved ? JSON.parse(saved) : DEFAULT_ACCOUNTS;
-    });
+    const [accounts, setAccounts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    // Fetch accounts on mount
     useEffect(() => {
-        localStorage.setItem('financial_moo_accounts', JSON.stringify(accounts));
-    }, [accounts]);
+        loadAccounts();
+    }, []);
 
-    const addAccount = (accountData) => {
-        const newAccount = {
-            id: uuidv4(),
-            ...accountData,
-            balance: parseFloat(accountData.balance) || 0,
-            isActive: true
-        };
-        setAccounts(prev => [...prev, newAccount]);
-        showToast(`Account "${accountData.name}" added`, 'success');
-    };
+    const loadAccounts = async () => {
+        try {
+            setLoading(true);
+            const data = await accountService.getAll();
 
-    const updateAccount = (id, updates) => {
-        setAccounts(prev => prev.map(acc =>
-            acc.id === id ? { ...acc, ...updates } : acc
-        ));
-        showToast('Account updated', 'success');
-    };
-
-    const deleteAccount = (id) => {
-        setAccounts(prev => prev.filter(acc => acc.id !== id));
-        showToast('Account deleted', 'success');
-    };
-
-    const updateBalance = (accountId, amount, operation = 'add') => {
-        setAccounts(prev => prev.map(acc => {
-            if (acc.id === accountId) {
-                const newBalance = operation === 'add'
-                    ? acc.balance + amount
-                    : acc.balance - amount;
-                return { ...acc, balance: newBalance };
+            // If no accounts, create defaults
+            if (data.length === 0) {
+                for (const defaultAcc of DEFAULT_ACCOUNTS) {
+                    await accountService.add(defaultAcc);
+                }
+                const newData = await accountService.getAll();
+                setAccounts(newData);
+            } else {
+                setAccounts(data);
             }
-            return acc;
-        }));
+        } catch (err) {
+            console.error('Error loading accounts:', err);
+            setError(err.message);
+            // Fallback to localStorage if Supabase fails
+            const saved = localStorage.getItem('financial_moo_accounts');
+            if (saved) setAccounts(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const transfer = (fromId, toId, amount) => {
-        setAccounts(prev => prev.map(acc => {
-            if (acc.id === fromId) {
-                return { ...acc, balance: acc.balance - amount };
-            }
-            if (acc.id === toId) {
-                return { ...acc, balance: acc.balance + amount };
-            }
-            return acc;
-        }));
-        showToast('Transfer completed', 'success');
+    const addAccount = async (accountData) => {
+        try {
+            const newAccount = await accountService.add(accountData);
+            setAccounts(prev => [...prev, newAccount]);
+            showToast(`Account "${accountData.name}" added`, 'success');
+        } catch (err) {
+            console.error('Error adding account:', err);
+            showToast('Failed to add account', 'error');
+        }
+    };
+
+    const updateAccount = async (id, updates) => {
+        try {
+            const updated = await accountService.update(id, updates);
+            setAccounts(prev => prev.map(acc => acc.id === id ? updated : acc));
+            showToast('Account updated', 'success');
+        } catch (err) {
+            console.error('Error updating account:', err);
+            showToast('Failed to update account', 'error');
+        }
+    };
+
+    const deleteAccount = async (id) => {
+        try {
+            await accountService.delete(id);
+            setAccounts(prev => prev.filter(acc => acc.id !== id));
+            showToast('Account deleted', 'success');
+        } catch (err) {
+            console.error('Error deleting account:', err);
+            showToast('Failed to delete account', 'error');
+        }
+    };
+
+    const updateBalance = useCallback(async (accountId, amount, operation = 'add') => {
+        try {
+            const updated = await accountService.updateBalance(accountId, amount, operation);
+            setAccounts(prev => prev.map(acc => acc.id === accountId ? updated : acc));
+        } catch (err) {
+            console.error('Error updating balance:', err);
+        }
+    }, []);
+
+    const transfer = async (fromId, toId, amount) => {
+        try {
+            await accountService.transfer(fromId, toId, amount);
+            // Reload to get fresh data
+            await loadAccounts();
+            showToast('Transfer completed', 'success');
+        } catch (err) {
+            console.error('Error transferring:', err);
+            showToast('Failed to transfer', 'error');
+        }
     };
 
     const getTotalBalance = () => {
@@ -86,13 +118,16 @@ export const AccountProvider = ({ children }) => {
     return (
         <AccountContext.Provider value={{
             accounts,
+            loading,
+            error,
             addAccount,
             updateAccount,
             deleteAccount,
             updateBalance,
             transfer,
             getTotalBalance,
-            getAccountById
+            getAccountById,
+            refreshAccounts: loadAccounts
         }}>
             {children}
         </AccountContext.Provider>
