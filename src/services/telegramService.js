@@ -1,8 +1,8 @@
 /**
- * Telegram Service - Send messages via Telegram Bot API
+ * Telegram Service - Direct API (No Proxy) for Testing
+ * This version bypasses the serverless proxy for easier setup
  */
 
-const TELEGRAM_API = import.meta.env.VITE_TELEGRAM_API_URL;
 const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
@@ -10,47 +10,63 @@ const CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
  * Check if Telegram is configured
  */
 export const isTelegramConfigured = () => {
-    return Boolean(BOT_TOKEN && CHAT_ID && TELEGRAM_API);
+    return Boolean(BOT_TOKEN && CHAT_ID);
 };
 
 /**
- * Send a message to Telegram
- * @param {string} message - Message text (supports Markdown)
- * @returns {Promise<boolean>} - Success status
+ * Send a message directly to Telegram API
+ * Note: This may have CORS issues in production, but works for testing
  */
 export const sendTelegramMessage = async (message) => {
     if (!isTelegramConfigured()) {
-        console.warn('Telegram not configured. Please set VITE_TELEGRAM_BOT_TOKEN and VITE_TELEGRAM_CHAT_ID in .env');
+        console.warn('Telegram not configured. Set VITE_TELEGRAM_BOT_TOKEN and VITE_TELEGRAM_CHAT_ID in .env');
+        console.warn('Current values:', {
+            hasToken: Boolean(BOT_TOKEN),
+            hasChatId: Boolean(CHAT_ID),
+            token: BOT_TOKEN ? `${BOT_TOKEN.substring(0, 10)}...` : 'undefined',
+            chatId: CHAT_ID || 'undefined'
+        });
         return false;
     }
 
     try {
-        const response = await fetch(TELEGRAM_API, {
+        const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+        console.log('Sending to Telegram...', {
+            url: url.substring(0, 50) + '...',
+            chatId: CHAT_ID,
+            messageLength: message.length
+        });
+
+        const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-                token: BOT_TOKEN,
-                chatId: CHAT_ID,
-                message
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown'
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`Telegram API error: ${response.statusText}`);
-        }
+        const data = await response.json();
 
-        return true;
+        if (data.ok) {
+            console.log('✅ Message sent successfully!', data.result);
+            return true;
+        } else {
+            console.error('❌ Telegram API error:', data);
+            return false;
+        }
     } catch (error) {
-        console.error('Failed to send Telegram message:', error);
+        console.error('❌ Failed to send Telegram message:', error);
         return false;
     }
 };
 
 /**
  * Send debt payment reminder
- * @param {Object} debt - Debt object
- * @param {number} daysLeft - Days until due date
- * @returns {Promise<boolean>} - Success status
  */
 export const sendDebtReminder = async (debt, daysLeft) => {
     const emoji = daysLeft <= 1 ? '🚨' : daysLeft <= 3 ? '⚠️' : '📅';
@@ -60,7 +76,7 @@ export const sendDebtReminder = async (debt, daysLeft) => {
 ${emoji} *${urgency}: Debt Payment Reminder*
 
 💳 *Debt:* ${debt.name}
-💰 *Amount:* Rp ${debt.totalDebt.toLocaleString('id-ID')}
+💰 *Amount:* Rp ${debt.totalDebt?.toLocaleString('id-ID') || debt.totalAmount?.toLocaleString('id-ID')}
 📅 *Due Date:* ${debt.dueDate}
 ⏰ *Days Left:* ${daysLeft} day${daysLeft > 1 ? 's' : ''}
 
@@ -75,7 +91,6 @@ _Action required: Please make payment soon._
 
 /**
  * Send test message
- * @returns {Promise<boolean>} - Success status
  */
 export const sendTestMessage = async () => {
     const message = `
@@ -88,6 +103,8 @@ You will receive debt payment reminders at:
 • 1 day before due date 🚨
 
 _Financial Moo - Your Smart Finance Tracker_
+
+Time: ${new Date().toLocaleString('id-ID')}
 `.trim();
 
     return sendTelegramMessage(message);
@@ -95,8 +112,6 @@ _Financial Moo - Your Smart Finance Tracker_
 
 /**
  * Send recurring transaction notification
- * @param {Object} recurring - Recurring transaction object
- * @returns {Promise<boolean>} - Success status
  */
 export const sendRecurringNotification = async (recurring) => {
     const emoji = recurring.type === 'expense' ? '💸' : '💰';
