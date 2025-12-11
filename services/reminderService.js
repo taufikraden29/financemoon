@@ -5,8 +5,8 @@
 import { differenceInDays, format, parseISO } from 'date-fns';
 import { sendDebtReminder } from '@/services/telegramService';
 
-// Reminder intervals (days before due date)
-const REMINDER_DAYS = [5, 3, 1];
+// Default reminder intervals (days before due date)
+const DEFAULT_REMINDER_DAYS = [5, 3, 1, 0];
 
 /**
  * Get sent reminders from localStorage
@@ -43,6 +43,7 @@ const isReminderSentToday = (reminderKey) => {
 
 /**
  * Check debts and send reminders if needed
+ * Uses the debt's reminderDays setting if available
  * @param {Array} debts - Array of debt objects
  * @returns {Promise<number>} - Number of reminders sent
  */
@@ -60,8 +61,20 @@ export const checkDebtReminders = async (debts) => {
             const dueDate = parseISO(debt.dueDate);
             const daysLeft = differenceInDays(dueDate, today);
 
-            // Check if reminder needed for this interval
-            if (REMINDER_DAYS.includes(daysLeft)) {
+            // Get reminder days from debt settings (e.g., "3" means 3 days before)
+            // Also check for overdue (0) and due today (0)
+            const reminderDays = parseInt(debt.reminderDays) || 3;
+
+            // Send reminder if:
+            // 1. Days left matches user-configured reminder days, OR
+            // 2. Due today (0 days left), OR
+            // 3. Overdue (negative days, but only once)
+            const shouldRemind =
+                daysLeft === reminderDays ||  // User-configured reminder day
+                daysLeft === 0 ||              // Due today
+                (daysLeft < 0 && daysLeft >= -1); // Overdue by 1 day
+
+            if (shouldRemind) {
                 const reminderKey = `${debt.id}-${daysLeft}`;
 
                 // Skip if already sent today
@@ -70,12 +83,12 @@ export const checkDebtReminders = async (debts) => {
                 }
 
                 // Send reminder
-                const sent = await sendDebtReminder(debt, daysLeft);
+                const sent = await sendDebtReminder(debt, Math.max(daysLeft, 0));
 
                 if (sent) {
                     markReminderSent(reminderKey);
                     remindersSent++;
-                    console.log(`✅ Sent reminder for ${debt.name} (${daysLeft} days left)`);
+                    console.log(`✅ Sent reminder for ${debt.name} (${daysLeft} days left, reminderDays: ${reminderDays})`);
                 } else {
                     console.warn(`⚠️ Failed to send reminder for ${debt.name}`);
                 }

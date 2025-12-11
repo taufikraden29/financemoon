@@ -67,21 +67,41 @@ export const sendTelegramMessage = async (message) => {
 
 /**
  * Send debt payment reminder
+ * @param {Object} debt - Debt object with payments info
+ * @param {number} daysLeft - Days until due date
  */
 export const sendDebtReminder = async (debt, daysLeft) => {
     const emoji = daysLeft <= 1 ? '🚨' : daysLeft <= 3 ? '⚠️' : '📅';
     const urgency = daysLeft <= 1 ? 'URGENT' : daysLeft <= 3 ? 'IMPORTANT' : 'REMINDER';
 
+    // Get next unpaid payment
+    const nextPayment = debt.payments?.find(p => !p.paid);
+    const paymentAmount = nextPayment?.amount || debt.perInstallment || debt.totalAmount;
+    const installmentNumber = nextPayment?.installmentNumber || 1;
+    const totalInstallments = debt.installments || debt.payments?.length || 1;
+
+    // Format due date nicely
+    const formattedDueDate = debt.dueDate ?
+        new Date(debt.dueDate).toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }) : 'Not set';
+
     const message = `
 ${emoji} *${urgency}: Debt Payment Reminder*
 
 💳 *Debt:* ${debt.name}
-💰 *Amount:* Rp ${debt.totalDebt?.toLocaleString('id-ID') || debt.totalAmount?.toLocaleString('id-ID')}
-📅 *Due Date:* ${debt.dueDate}
+📊 *Installment:* ${installmentNumber} of ${totalInstallments}
+💰 *Amount Due:* Rp ${paymentAmount?.toLocaleString('id-ID')}
+📅 *Due Date:* ${formattedDueDate}
 ⏰ *Days Left:* ${daysLeft} day${daysLeft > 1 ? 's' : ''}
 
 ${daysLeft <= 1 ? '⚠️ *Payment due tomorrow!*' : ''}
 ${daysLeft === 0 ? '🚨 *PAYMENT DUE TODAY!*' : ''}
+
+💵 *Total Debt:* Rp ${debt.totalAmount?.toLocaleString('id-ID')}
 
 _Action required: Please make payment soon._
 `.trim();

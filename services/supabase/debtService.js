@@ -22,6 +22,12 @@ export const debtService = {
 
         if (paymentsError) throw paymentsError
 
+        // Get reminderDays settings from localStorage
+        let reminderSettings = {}
+        try {
+            reminderSettings = JSON.parse(localStorage.getItem('debt_reminder_settings') || '{}')
+        } catch { /* ignore */ }
+
         // Combine debts with their payments and find next due date
         return debts.map(debt => {
             const debtPayments = payments
@@ -35,7 +41,8 @@ export const debtService = {
                 ...transformDebtFromDB(debt),
                 payments: debtPayments,
                 dueDate: nextUnpaidPayment?.dueDate || null, // For reminder service
-                isPaid: !nextUnpaidPayment // All payments done
+                isPaid: !nextUnpaidPayment, // All payments done
+                reminderDays: reminderSettings[debt.id] || 3 // Default 3 days before
             }
         })
     },
@@ -81,6 +88,13 @@ export const debtService = {
             .insert(payments)
 
         if (paymentsError) throw paymentsError
+
+        // Save reminderDays setting to localStorage
+        try {
+            const reminderSettings = JSON.parse(localStorage.getItem('debt_reminder_settings') || '{}')
+            reminderSettings[debt.id] = parseInt(debtData.reminderDays) || 3
+            localStorage.setItem('debt_reminder_settings', JSON.stringify(reminderSettings))
+        } catch { /* ignore */ }
 
         // Return complete debt with payments and dueDate for reminders
         return {
