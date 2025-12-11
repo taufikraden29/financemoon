@@ -2,11 +2,11 @@
 
 import { ArrowRight, CreditCard, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useDebt } from '@/context/DebtContext';
+import { useDebts } from '@/hooks/useDebts';
 import { getRemainingBalance } from '@/utils/debtHelpers';
 
 const DebtSummaryCard = () => {
-    const { debts } = useDebt();
+    const { debts } = useDebts();
     const router = useRouter();
 
     const activeDebts = debts.filter(d => d.status === 'active');

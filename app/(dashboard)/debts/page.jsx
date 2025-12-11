@@ -7,12 +7,12 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import DebtCard from '@/components/DebtCard';
 import DebtDetailModal from '@/components/DebtDetailModal';
 import EditDebtModal from '@/components/EditDebtModal';
-import { useDebt } from '@/context/DebtContext';
+import { useDebts } from '@/hooks/useDebts';
 import { useToast } from '@/context/ToastContext';
 import { isTelegramConfigured, sendTestMessage } from '@/services/telegramService';
 
 export default function DebtsPage() {
-  const { debts, deleteDebt } = useDebt();
+  const { debts, deleteDebt } = useDebts();
   const { showToast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState(null);

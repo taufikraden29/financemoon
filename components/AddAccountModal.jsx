@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-import { useAccount } from '../context/AccountContext';
+import { useAccounts } from '@/hooks/useAccounts';
 import CurrencyInput from './CurrencyInput';
 
 const ACCOUNT_TYPES = [
@@ -14,7 +14,7 @@ const ACCOUNT_TYPES = [
 ];
 
 const AddAccountModal = ({ isOpen, onClose, editAccount = null }) => {
-    const { addAccount, updateAccount } = useAccount();
+    const { addAccount, updateAccount } = useAccounts();
     const [formData, setFormData] = useState({
         name: '',
         type: 'cash',
@@ -164,4 +164,5 @@ AddAccountModal.propTypes = {
 };
 
 export default AddAccountModal;
+
 

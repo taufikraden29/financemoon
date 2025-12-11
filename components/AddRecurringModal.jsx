@@ -6,8 +6,8 @@ import { RefreshCw, X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { getCategoriesByType } from '../constants/categories';
-import { useAccount } from '../context/AccountContext';
-import { useRecurring } from '../context/RecurringTransactionContext';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useRecurring } from '@/hooks/useRecurring';
 import CurrencyInput from './CurrencyInput';
 
 const RECURRENCE_TYPES = [
@@ -19,7 +19,7 @@ const RECURRENCE_TYPES = [
 
 const AddRecurringModal = ({ isOpen, onClose, editRecurring = null }) => {
     const { addRecurring, updateRecurring } = useRecurring();
-    const { accounts } = useAccount();
+    const { accounts } = useAccounts();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -281,4 +281,5 @@ AddRecurringModal.propTypes = {
 };
 
 export default AddRecurringModal;
+
 

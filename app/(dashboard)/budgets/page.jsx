@@ -6,11 +6,11 @@ import { AlertCircle, CheckCircle, Edit, Plus, Trash2, TrendingUp, Wallet } from
 import { useState } from 'react';
 import AddBudgetModal from '@/components/AddBudgetModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { useBudget } from '@/context/BudgetContext';
+import { useBudgets } from '@/hooks/useBudgets';
 import { calculatePercentage, formatRupiah } from '@/utils/currencyHelpers';
 
 export default function BudgetsPage() {
-  const { budgets, deleteBudget, getCurrentMonthBudgets } = useBudget();
+  const { budgets, deleteBudget, getCurrentMonthBudgets } = useBudgets();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });

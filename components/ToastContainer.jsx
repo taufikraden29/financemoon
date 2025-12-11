@@ -1,6 +1,6 @@
 'use client';
 
-import { useToast } from '../context/ToastContext';
+import { useToast } from '@/context/ToastContext';
 import Toast from './Toast';
 
 const ToastContainer = () => {

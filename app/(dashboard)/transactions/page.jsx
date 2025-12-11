@@ -7,17 +7,17 @@ import { useState } from 'react';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import DateRangeFilter from '@/components/DateRangeFilter';
-import { useAccount } from '@/context/AccountContext';
-import { useBudget } from '@/context/BudgetContext';
-import { useFinance } from '@/context/FinanceContext';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useBudgets } from '@/hooks/useBudgets';
+import { useTransactions } from '@/hooks/useTransactions';
 import { useToast } from '@/context/ToastContext';
 import { DATE_FILTERS, isInDateRange } from '@/utils/dateHelpers';
 import { downloadCSV, exportToCSV, generateFilename } from '@/utils/exportHelpers';
 
 export default function TransactionsPage() {
-  const { transactions, deleteTransaction } = useFinance();
-  const { updateBalance } = useAccount();
-  const { updateSpent } = useBudget();
+  const { transactions, deleteTransaction } = useTransactions();
+  const { updateBalance } = useAccounts();
+  const { updateSpent } = useBudgets();
   const { showToast } = useToast();
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');

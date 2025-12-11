@@ -2,10 +2,10 @@
 
 import { Menu, Wallet } from 'lucide-react';
 import PropTypes from 'prop-types';
-import { useFinance } from '../context/FinanceContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 const MobileNav = ({ onMenuClick, isSidebarOpen, onCloseSidebar }) => {
-    const { getBalance } = useFinance();
+    const { getBalance } = useTransactions();
 
     return (
         <>
@@ -61,4 +61,5 @@ MobileNav.propTypes = {
 };
 
 export default MobileNav;
+
 

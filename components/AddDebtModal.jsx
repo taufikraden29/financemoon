@@ -5,12 +5,12 @@ import { addMonths, format } from 'date-fns';
 import { Bell, X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-import { useDebt } from '../context/DebtContext';
+import { useDebts } from '@/hooks/useDebts';
 import { calculateInstallment, validateDebt } from '../utils/debtHelpers';
 import CurrencyInput from './CurrencyInput';
 
 const AddDebtModal = ({ isOpen, onClose }) => {
-    const { addDebt } = useDebt();
+    const { addDebt } = useDebts();
     const [formData, setFormData] = useState({
         name: '',
         totalAmount: '',
@@ -212,4 +212,5 @@ AddDebtModal.propTypes = {
 };
 
 export default AddDebtModal;
+
 

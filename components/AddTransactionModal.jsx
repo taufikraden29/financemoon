@@ -5,16 +5,16 @@ import { X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { getCategoriesByType } from '../constants/categories';
-import { useAccount } from '../context/AccountContext';
-import { useBudget } from '../context/BudgetContext';
-import { useFinance } from '../context/FinanceContext';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useBudgets } from '@/hooks/useBudgets';
+import { useTransactions } from '@/hooks/useTransactions';
 import { validateTransaction } from '../utils/validation';
 import CurrencyInput from './CurrencyInput';
 
 const AddTransactionModal = ({ isOpen, onClose, editTransaction = null }) => {
-    const { addTransaction, updateTransaction } = useFinance();
-    const { accounts, updateBalance } = useAccount();
-    const { updateSpent } = useBudget();
+    const { addTransaction, updateTransaction } = useTransactions();
+    const { accounts, updateBalance } = useAccounts();
+    const { updateSpent } = useBudgets();
     const [formData, setFormData] = useState({
         description: '',
         amount: '',
@@ -260,4 +260,5 @@ AddTransactionModal.propTypes = {
 };
 
 export default AddTransactionModal;
+
 

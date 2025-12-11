@@ -3,10 +3,10 @@
 import clsx from 'clsx';
 import { AlertCircle, CheckCircle, Plus, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useBudget } from '@/context/BudgetContext';
+import { useBudgets } from '@/hooks/useBudgets';
 
 const BudgetSummary = () => {
-    const { getCurrentMonthBudgets } = useBudget();
+    const { getCurrentMonthBudgets } = useBudgets();
     const router = useRouter();
 
     const budgets = getCurrentMonthBudgets();

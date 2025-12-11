@@ -12,10 +12,10 @@ import DebtSummaryCard from '@/components/DebtSummaryCard';
 import RecurringSummary from '@/components/RecurringSummary';
 import SavingsSummary from '@/components/SavingsSummary';
 import StatsCard from '@/components/StatsCard';
-import { useFinance } from '@/context/FinanceContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 export default function DashboardPage() {
-  const { transactions, getBalance, getIncome, getExpense } = useFinance();
+  const { transactions, getBalance, getIncome, getExpense } = useTransactions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 

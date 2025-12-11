@@ -4,11 +4,11 @@ import clsx from 'clsx';
 import { format } from 'date-fns';
 import { CheckCircle, Circle, X } from 'lucide-react';
 import PropTypes from 'prop-types';
-import { useDebt } from '../context/DebtContext';
+import { useDebts } from '@/hooks/useDebts';
 import { calculateProgress, getRemainingBalance, getTotalPaid } from '../utils/debtHelpers';
 
 const DebtDetailModal = ({ debt, isOpen, onClose }) => {
-    const { markPayment, unmarkPayment } = useDebt();
+    const { markPayment, unmarkPayment } = useDebts();
 
     if (!isOpen || !debt) return null;
 
@@ -177,4 +177,5 @@ DebtDetailModal.propTypes = {
 };
 
 export default DebtDetailModal;
+
 

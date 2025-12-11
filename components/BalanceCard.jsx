@@ -1,13 +1,13 @@
 'use client';
 
 import { ArrowDownRight, ArrowUpRight, TrendingUp, Wallet } from 'lucide-react';
-import { useAccount } from '../context/AccountContext';
-import { useFinance } from '../context/FinanceContext';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useTransactions } from '@/hooks/useTransactions';
 import { formatRupiah } from '../utils/currencyHelpers';
 
 const BalanceCard = () => {
-    const { getTotalBalance } = useAccount();
-    const { getBalance, getIncome, getExpense } = useFinance();
+    const { getTotalBalance } = useAccounts();
+    const { getBalance, getIncome, getExpense } = useTransactions();
 
     const accountBalance = getTotalBalance();
     const transactionBalance = getBalance();
@@ -114,4 +114,5 @@ const BalanceCard = () => {
 };
 
 export default BalanceCard;
+
 

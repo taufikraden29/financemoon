@@ -6,10 +6,10 @@ import PropTypes from 'prop-types';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { useFinance } from '@/context/FinanceContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 const Sidebar = ({ isOpen, onClose }) => {
-    const { getBalance } = useFinance();
+    const { getBalance } = useTransactions();
     const { logout } = useAuth();
     const router = useRouter();
     const pathname = usePathname();

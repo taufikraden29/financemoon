@@ -4,11 +4,11 @@ import { X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { EXPENSE_CATEGORIES } from '../constants/categories';
-import { useBudget } from '../context/BudgetContext';
+import { useBudgets } from '@/hooks/useBudgets';
 import CurrencyInput from './CurrencyInput';
 
 const AddBudgetModal = ({ isOpen, onClose, editBudget = null }) => {
-    const { addBudget, updateBudget } = useBudget();
+    const { addBudget, updateBudget } = useBudgets();
     const [formData, setFormData] = useState({
         category: 'Food',
         limit: '',
@@ -149,4 +149,5 @@ AddBudgetModal.propTypes = {
 };
 
 export default AddBudgetModal;
+
 

@@ -4,13 +4,13 @@ import clsx from 'clsx';
 import { ArrowRight, ArrowRightLeft, X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-import { useAccount } from '../context/AccountContext';
-import { useActivity } from '../context/ActivityContext';
+import { useAccounts } from '@/hooks/useAccounts';
+import { useActivities } from '@/hooks/useActivities';
 import CurrencyInput from './CurrencyInput';
 
 const TransferModal = ({ isOpen, onClose }) => {
-    const { accounts, transfer } = useAccount();
-    const { logActivity } = useActivity();
+    const { accounts, transfer } = useAccounts();
+    const { logActivity } = useActivities();
     const [formData, setFormData] = useState({
         fromAccount: '',
         toAccount: '',
@@ -221,4 +221,5 @@ TransferModal.propTypes = {
 };
 
 export default TransferModal;
+
 

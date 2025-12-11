@@ -2,10 +2,10 @@
 
 import { Award, Calculator, TrendingDown, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
-import { useFinance } from '../context/FinanceContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 const SummaryInsights = () => {
-    const { transactions } = useFinance();
+    const { transactions } = useTransactions();
 
     const insights = useMemo(() => {
         if (transactions.length === 0) {
@@ -130,4 +130,5 @@ const SummaryInsights = () => {
 };
 
 export default SummaryInsights;
+
 

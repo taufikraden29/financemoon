@@ -3,10 +3,10 @@
 import PropTypes from 'prop-types';
 import { useMemo } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { useFinance } from '../context/FinanceContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 const CategoryPieChart = ({ type = 'expense' }) => {
-    const { transactions } = useFinance();
+    const { transactions } = useTransactions();
 
     const categoryData = useMemo(() => {
         const filtered = transactions.filter(t => t.type === type);
@@ -84,4 +84,5 @@ CategoryPieChart.propTypes = {
 };
 
 export default CategoryPieChart;
+
 

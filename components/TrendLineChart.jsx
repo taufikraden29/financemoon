@@ -3,10 +3,10 @@
 import { eachMonthOfInterval, format, startOfMonth, subMonths } from 'date-fns';
 import { useMemo } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useFinance } from '../context/FinanceContext';
+import { useTransactions } from '@/hooks/useTransactions';
 
 const TrendLineChart = () => {
-    const { transactions } = useFinance();
+    const { transactions } = useTransactions();
 
     const chartData = useMemo(() => {
         const last6Months = eachMonthOfInterval({
@@ -95,4 +95,5 @@ const TrendLineChart = () => {
 };
 
 export default TrendLineChart;
+
 

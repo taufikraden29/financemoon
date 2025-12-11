@@ -3,7 +3,7 @@
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { Calendar, Plus, RefreshCw, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useRecurring } from '@/context/RecurringTransactionContext';
+import { useRecurring } from '@/hooks/useRecurring';
 import { formatRupiah } from '@/utils/currencyHelpers';
 
 const RecurringSummary = () => {

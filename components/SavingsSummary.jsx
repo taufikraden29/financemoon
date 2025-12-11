@@ -2,7 +2,7 @@
 
 import { Plus, Target } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useSavings } from '@/context/SavingsContext';
+import { useSavings } from '@/hooks/useSavings';
 
 const SavingsSummary = () => {
     const { savings, getTotalSaved } = useSavings();

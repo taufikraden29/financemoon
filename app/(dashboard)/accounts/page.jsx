@@ -6,10 +6,10 @@ import { useState } from 'react';
 import AddAccountModal from '@/components/AddAccountModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import TransferModal from '@/components/TransferModal';
-import { useAccount } from '@/context/AccountContext';
+import { useAccounts } from '@/hooks/useAccounts';
 
 export default function AccountsPage() {
-  const { accounts, deleteAccount } = useAccount();
+  const { accounts, deleteAccount } = useAccounts();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);

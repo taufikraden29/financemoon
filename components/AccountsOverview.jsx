@@ -2,11 +2,11 @@
 
 import { Landmark, Plus, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from '@/context/AccountContext';
+import { useAccounts } from '@/hooks/useAccounts';
 import { formatRupiah } from '@/utils/currencyHelpers';
 
 const AccountsOverview = () => {
-    const { accounts } = useAccount();
+    const { accounts } = useAccounts();
     const router = useRouter();
 
     const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);

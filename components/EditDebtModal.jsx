@@ -6,11 +6,11 @@ import { id as localeId } from 'date-fns/locale';
 import { Bell, Calendar, X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-import { useDebt } from '../context/DebtContext';
+import { useDebts } from '@/hooks/useDebts';
 import CurrencyInput from './CurrencyInput';
 
 const EditDebtModal = ({ debt, isOpen, onClose }) => {
-    const { updateDebt, updatePaymentDueDate, refreshDebts } = useDebt();
+    const { updateDebt, updatePaymentDueDate, refreshDebts } = useDebts();
     const [formData, setFormData] = useState({
         name: '',
         totalAmount: '',
@@ -236,5 +236,6 @@ EditDebtModal.propTypes = {
 };
 
 export default EditDebtModal;
+
 
 

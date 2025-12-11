@@ -3,13 +3,6 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ActivityProvider } from '@/context/ActivityContext';
-import { AccountProvider } from '@/context/AccountContext';
-import { BudgetProvider } from '@/context/BudgetContext';
-import { SavingsProvider } from '@/context/SavingsContext';
-import { FinanceProvider } from '@/context/FinanceContext';
-import { RecurringTransactionProvider } from '@/context/RecurringTransactionContext';
-import { DebtProvider } from '@/context/DebtContext';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 import FloatingCalculator from '@/components/FloatingCalculator';
@@ -41,36 +34,22 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <ActivityProvider>
-      <AccountProvider>
-        <BudgetProvider>
-          <SavingsProvider>
-            <FinanceProvider>
-              <RecurringTransactionProvider>
-                <DebtProvider>
-                  <div className="min-h-screen bg-slate-950">
-                    <MobileNav
-                      onMenuClick={() => setIsSidebarOpen(true)}
-                      isSidebarOpen={isSidebarOpen}
-                      onCloseSidebar={() => setIsSidebarOpen(false)}
-                    />
-                    <Sidebar
-                      isOpen={isSidebarOpen}
-                      onClose={() => setIsSidebarOpen(false)}
-                    />
-                    <main className="md:ml-64 min-h-screen p-8 pt-20 md:pt-8 transition-all duration-300">
-                      <div className="max-w-7xl mx-auto space-y-8">
-                        {children}
-                      </div>
-                    </main>
-                    <FloatingCalculator />
-                  </div>
-                </DebtProvider>
-              </RecurringTransactionProvider>
-            </FinanceProvider>
-          </SavingsProvider>
-        </BudgetProvider>
-      </AccountProvider>
-    </ActivityProvider>
+    <div className="min-h-screen bg-slate-950">
+      <MobileNav
+        onMenuClick={() => setIsSidebarOpen(true)}
+        isSidebarOpen={isSidebarOpen}
+        onCloseSidebar={() => setIsSidebarOpen(false)}
+      />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+      <main className="md:ml-64 min-h-screen p-8 pt-20 md:pt-8 transition-all duration-300">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {children}
+        </div>
+      </main>
+      <FloatingCalculator />
+    </div>
   );
 }

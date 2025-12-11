@@ -6,7 +6,7 @@ import { Calendar, Edit, Pause, Play, Plus, RefreshCw, Trash2, TrendingUp } from
 import { useState } from 'react';
 import AddRecurringModal from '@/components/AddRecurringModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { useRecurring } from '@/context/RecurringTransactionContext';
+import { useRecurring } from '@/hooks/useRecurring';
 import { formatRupiah } from '@/utils/currencyHelpers';
 
 export default function RecurringTransactionsPage() {
